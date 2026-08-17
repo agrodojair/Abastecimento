@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conferência</title>
+  <style>
+    :root {
+      --primary: #25d366;
+      --bg: #f4f6f8;
+      --card-bg: #ffffff;
+      --text: #333333;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      padding-bottom: 90px; /* Garante que o botão flutuante não cubra nada no fim da página */
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .search-section, .list-section {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .search-box {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 12px 16px;
+      background: #1aa84c;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #127736;
+    }
+
+    .btn-whatsapp {
+      background: var(--primary);
+      width: 100%;
+      margin-top: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-whatsapp:hover {
+      background: #1ebd56;
+    }
+
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .product-item {
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fafafa;
+      gap: 10px;
+    }
+
+    .product-info h4 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .product-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .weight-select {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      background: white;
+    }
+
+    .selected-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .selected-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .btn-remove {
+      background: #ff4d4d;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    .btn-remove:hover {
+      background: #cc0000;
+    }
+
+    /* Estilo do Botão Flutuante */
+    .btn-floating {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 30px;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .btn-floating:hover {
+      background-color: #0056b3;
+      transform: translateY(-2px);
+    }
+
+    /* Estilo do Pop-up / Toast Notification */
+    .toast-notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background-color: #2e7d32;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-weight: bold;
+      font-size: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+    }
+
+    .toast-notification.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Elemento do Pop-up -->
+  <div id="toast" class="toast-notification">✓ Ração adicionada com sucesso!</div>
+
+  <div class="container">
+    <!-- Seção de Busca -->
+    <div class="search-section">
+      <h2>Rações Granel</h2>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Digite para buscar a ração..." onkeyup="buscarNoCatalogo()">
+      </div>
+      <div id="results" class="results-list"></div>
+    </div>
+
+    <!-- Seção da Lista de Envio -->
+    <div class="list-section" id="listSection">
+      <h3>Rações Abastecidas</h3>
+      <ul id="selectedList" class="selected-list"></ul>
+      <button class="btn-whatsapp" onclick="enviarWhatsApp()">
+        Enviar via WhatsApp
+      </button>
+    </div>
+  </div>
+
+  <!-- Botão Flutuante -->
+  <button class="btn-floating" onclick="rolarParaOFim()">
+    Finalizar ↓
+  </button>
+
+  <script>
+    const catalogoProdutos = [
+        { id: 1 , nome: 'Adubo Preto Kg'},
+        { id: 2 , nome: 'Aveia Kg'},
+        { id: 3 , nome: 'Calcario Kg'},
+        { id: 4 , nome: 'Melaco Kg'},
+        { id: 5 , nome: 'Milho Inteiro Kg'},
+        { id: 6 , nome: 'Milho Quebrado Fino Kg'},
+        { id: 7 , nome: 'Milho Quebrado Grosso Kg'},
+        { id: 8 , nome: 'Farinha De Calcio Kg'},
+        { id: 9 , nome: 'Arroz Quirera Kg'},
+        { id: 10 , nome: 'Crescimento Kg'},
+        { id: 11 , nome: 'Galo De Ouro Kg'},
+        { id: 12 , nome: 'Postura Granulada Kg'},
+        { id: 13 , nome: 'Postura Triturada Kg'},
+        { id: 14 , nome: 'Coelho Kg'},
+        { id: 15 , nome: 'Adubo 5.20.20 Kg'},
+        { id: 16 , nome: 'Bocao Original Kg'},
+        { id: 17 , nome: 'Soft Dog Kg'},
+        { id: 18 , nome: 'Ureia Kg'},
+        { id: 19 , nome: 'Racao Mix Kg'},
+        { id: 20 , nome: 'Racao Peixe Kg'},
+        { id: 21 , nome: 'Supra Impulso C/ Coccidiostatico Kg'},
+        { id: 22 , nome: 'Bocao Premium Adulto Raças Grandes Kg'},
+        { id: 23 , nome: 'Lux Brain Adultos Kg'},
+        { id: 24 , nome: 'Soft Dog Select Kg'},
+        { id: 25 , nome: 'Billy Dog Kg'},
+        { id: 26 , nome: 'Palatto Tradicional Kg'},
+        { id: 27 , nome: 'Bautor Gatos Premium Kg'},
+        { id: 28 , nome: 'Famil Dog Kg'},
+        { id: 29 , nome: 'Soft Cat Kg'},
+        { id: 30 , nome: 'Birbo Tradicional Kg'},
+        { id: 31 , nome: 'Bocao Filhote Kg'},
+        { id: 32 , nome: 'Nutri Bico Periquito Kg'},
+        { id: 33 , nome: 'Besser Kg'},
+        { id: 34 , nome: 'Fino Trato Active Filhotes Kg'},
+        { id: 35 , nome: 'Billy Dog Filhote Kg'},
+        { id: 36 , nome: 'Nutri Bico Calopsita Kg'},
+        { id: 37 , nome: 'Billy Dog Racas Pequenas Kg'},
+        { id: 38 , nome: 'Mopi Menu Cao Raças Medias E Grandes Cordeiro Kg'},
+        { id: 39 , nome: 'Quartz Bacon Kg'},
+        { id: 40 , nome: 'Arpus Raças Pequenas Frango E Arroz Kg'},
+        { id: 41 , nome: 'Bautor Gatos Castrados Premium Kg'},
+        { id: 42 , nome: 'Billy Cat Castrados Kg'},
+        { id: 43 , nome: 'Billy Cat Mix Kg'},
+        { id: 44 , nome: 'Gran Nature Adultos Raças Grandes Kg'},
+        { id: 45 , nome: 'Monello Go Kg'},
+        { id: 46 , nome: 'Soft Cat Castrados Kg'},
+        { id: 47 , nome: 'Quartz Supreme Kg'},
+        { id: 48 , nome: 'Bocao Raças Pequenas Kg'},
+        { id: 49 , nome: 'Gran Plus Choice Adulto Kg'},
+        { id: 50 , nome: 'Monello Tradicional Kg'},
+        { id: 51 , nome: 'Quartz Filhote Racas Grandes Kg'},
+        { id: 52 , nome: 'Quartz Raças Pequenas Adultos Kg'},
+        { id: 53 , nome: 'Sapeca Raças Grandes Adulto Kg'},
+        { id: 54 , nome: 'Sapeca Raças Pequenas Adulto Kg'},
+        { id: 55 , nome: 'Nutri Bico Canario Terra E Coleiro Kg'},
+        { id: 56 , nome: 'Nutri Bico Cardeal Kg'},
+        { id: 57 , nome: 'Billy Cat Filhote Kg'},
+        { id: 58 , nome: 'Fino Trato Prime Raças Pequenas Kg'},
+        { id: 59 , nome: 'Mopi Menu Gato Castrado Frango E Peixe Kg'},
+        { id: 60 , nome: 'Primogato Original Kg'},
+        { id: 61 , nome: 'Quartz Light Castrados Kg'},
+        { id: 62 , nome: 'Fino Trato Raças Pequenas Senior Kg'},
+        { id: 63 , nome: 'Gran Nature Xtreme Performance Adultos Kg'},
+        { id: 64 , nome: 'Quartz Premium Hard Training Kg'},
+        { id: 65 , nome: 'Quartz Senior Raças Medias E Grandes Kg'},
+        { id: 66 , nome: 'Fino Trato Light Kg'},
+        { id: 67 , nome: 'Fino Trato Raças Pequenas Filhote Kg'},
+        { id: 68 , nome: 'Gran Plus Raças Pequenas Carne Kg'},
+        { id: 69 , nome: 'Gran Plus Raças Pequenas Frango Kg'},
+        { id: 70 , nome: 'Primogato Filhote Kg'},
+        { id: 71 , nome: 'Quartz Senior Raças Pequenas Kg'},
+        { id: 72 , nome: 'Sapeca Raças Grandes Filhote Kg'},
+        { id: 73 , nome: 'Three Dogs Raças Pequenas Adulto Kg'},
+        { id: 74 , nome: 'Golden Power Training  Adulto Kg'},
+        { id: 75 , nome: 'Gran Nature Xtreme Performance Filhotes Kg'},
+        { id: 76 , nome: 'Monello Power Kg'},
+        { id: 77 , nome: 'Nutri Bico Canario Belga Kg'},
+        { id: 78 , nome: 'Nutri Bico Trinca Ferro Goiaba Kg'},
+        { id: 79 , nome: 'Birbo Raças Pequenas Kg'},
+        { id: 80 , nome: 'Quartz Filhote Racas Pequenas Kg'},
+        { id: 81 , nome: 'Brain Plus Raças Pequenas Kg'},
+        { id: 82 , nome: 'Erva Kg'},
+        { id: 83 , nome: 'Famil Castrados Kg'},
+        { id: 84 , nome: 'Golden Raças Pequenas Carne Kg'},
+        { id: 85 , nome: 'Golden Raças Pequenas Frango Kg'},
+        { id: 86 , nome: 'Gran Nature Xtreme Small Raças Peq. Kg'},
+        { id: 87 , nome: 'Three Dogs Raças Pequenas Filhote Kg'},
+        { id: 88 , nome: 'Golden Power Training Filhote Kg'},
+        { id: 89 , nome: 'Monello Raças Pequenas Kg'},
+        { id: 90 , nome: 'Nutri Bico Mistura P/ Roedores Kg'},
+        { id: 91 , nome: 'Golden Raças Pequenas Filhote Carne Kg'},
+        { id: 92 , nome: 'Monello Senior Kg'},
+        { id: 93 , nome: 'Nutri Bico Girassol Kg'},
+        { id: 94 , nome: 'Brain Plus Senior Kg'},
+        { id: 95 , nome: 'Finotrato Raças Pequenas Sensitive Kg'},
+        { id: 96 , nome: 'Golden Senior Kg'},
+        { id: 97 , nome: 'Monello Gato Go Kg'},
+        { id: 98 , nome: 'Monello Raças Pequenas Filhote Kg'},
+        { id: 99 , nome: 'Monello Raças Pequenas S/ Corantes Kg'},
+        { id: 100 , nome: 'Primogato Blend Kg'},
+        { id: 101 , nome: 'Primogato Castrados Kg'},
+        { id: 102 , nome: 'Quartz Gatos Castrados Frango Kg'},
+        { id: 103 , nome: 'Quartz Gatos Castrados Salmao Kg'},
+        { id: 104 , nome: 'Three Cats Filhote Kg'},
+        { id: 105 , nome: 'Nutri Bico Canarita Amarela Kg'},
+        { id: 106 , nome: 'Nutri Bico Papagaio Kg'},
+        { id: 107 , nome: 'Brain Plus Gatos Kg'},
+        { id: 108 , nome: 'Brain Plus Gatos Salmao Kg'},
+        { id: 109 , nome: 'Monello Raças Grandes Filhote Kg'},
+        { id: 110 , nome: 'Three Cats Castrados Kg'},
+        { id: 111 , nome: 'Nutri Bico Alpiste Kg'},
+        { id: 112 , nome: 'Gran Plus Gourmet Raças Peq. Ovelha & Arroz Kg'},
+        { id: 113 , nome: 'MimoS Dog Kg'},
+        { id: 114 , nome: 'Birbo Castrados Kg'},
+        { id: 115 , nome: 'Gran Plus Castrados Carne Kg'},
+        { id: 116 , nome: 'Gran Plus Castrados Frango Kg'},
+        { id: 117 , nome: 'Gran Plus Castrados Salmão Kg'},
+        { id: 118 , nome: 'Mimos Cat Kg'},
+        { id: 119 , nome: 'Monello Castrados Kg'},
+        { id: 120 , nome: 'Monello Gato Adulto Kg'},
+        { id: 121 , nome: 'Nutri Bico Papa De Ovo Kg'},
+        { id: 122 , nome: 'Birbo Gatos Peru Kg'},
+        { id: 123 , nome: 'Frade / Sabia Kg'},
+        { id: 124 , nome: 'Golden Castrados Carne Kg'},
+        { id: 125 , nome: 'Golden Castrados Frango Kg'},
+        { id: 126 , nome: 'Golden Castrados Salmao Kg'},
+        { id: 127 , nome: 'Enxofre Kg'},
+        { id: 128 , nome: 'Friskies Mar De Sabores Kg'},
+        { id: 129 , nome: 'Whiskas Adulto Carne Kg'},
+        { id: 130 , nome: 'Whiskas Adulto Frango Kg'},
+        { id: 131 , nome: 'Whiskas Adulto Peixe Kg'},
+        { id: 132 , nome: 'Whiskas Castrados Carne Kg'},
+        { id: 133 , nome: 'Whiskas Castrados Peixe Kg'},
+        { id: 134 , nome: 'Monello Gato Filhote Kg'},
+        { id: 135 , nome: 'Whiskas Filhote Kg'},
+        { id: 136 , nome: 'Nutri Bico Bico E Trinca Kg'},
+        { id: 137 , nome: 'Nutri Bico Farinhada Milho Verde Kg'},
+        { id: 138 , nome: 'Nutri Bico Frutti Pepper Kg'},
+        { id: 139 , nome: 'Extrusado Psitacideo Nutri Bico Kg'},
+        { id: 140 , nome: 'Cloro Kg'},
+        { id: 141 , nome: 'Nutri Bico Trinca Ferro C/ Tenebrio Kg'},
+        { id: 142 , nome: 'Farinhada Uva Nutri Bico Kg'},
+        { id: 143 , nome: 'Nutri Bico Farinhada Super Canto Kg'},
+        { id: 144 , nome: 'Psitacideos Gourmet Nutri Bico Kg'},
+        { id: 145 , nome: 'Nutri Flok Nutri Bico Kg'},
+        { id: 146 , nome: 'Farinhada Silvestres C/ Côco Nutri Bico Kg'},
+        { id: 147 , nome: 'Farinhada Umida Kg'},
+        { id: 148 , nome: 'Nutri Bico Trinca Ferro Turbinada Kg'},
+        { id: 149 , nome: 'Extrusada Power P/ Trinca C/ Fruta Nutri Bico Kg'},
+        { id: 150 , nome: 'Nutri Bico Extrusada P/ Trinca C/ Pimenta Kg'},
+        { id: 151 , nome: 'Nutri Bico Extrusada Power Kg'},
+        { id: 152 , nome: 'Farinhada Milho Verde Insetos Nutri Bico Kg'},
+        { id: 153 , nome: 'Farinhada Canario Vermelha Nutri Bico Kg'},
+        { id: 154 , nome: 'Nutri Bico Trinca Ferro Protein Kg'},
+        { id: 155 , nome: 'Trinca-Ferro Gourmet Nutri Bico Kg'},
+        { id: 156 , nome: 'Semente Milho Kg'},
+        { id: 157 , nome: 'Osso Natural Kg'},
+        { id: 158 , nome: 'Flocada P/ Peixes Nutri Flakes Kg'}
+    ];
+
+    let minhaLista = [];
+    let toastTimeout;
+
+    // Função para exibir o pop-up temporário
+    function mostrarPopup(mensagem) {
+      const toast = document.getElementById('toast');
+      toast.innerText = mensagem;
+      toast.classList.add('show');
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 1500); // 1.5 segundos
+    }
+
+    // Função para rolar suavemente até o final da página
+    function rolarParaOFim() {
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+
+    // Filtra o catálogo conforme o usuário digita
+    function buscarNoCatalogo() {
+      const termo = document.getElementById('searchInput').value.toLowerCase().trim();
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+
+      if (termo === '') {
+        exibirProdutos(catalogoProdutos);
+        return;
+      }
+
+      const filtrados = catalogoProdutos.filter(item => 
+        item.nome.toLowerCase().includes(termo)
+      );
+
+      exibirProdutos(filtrados);
+    }
+
+    // Renderiza a lista de produtos
+    function exibirProdutos(produtos) {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+
+      if (produtos.length === 0) {
+        resultsDiv.innerHTML = '<p style="color: #888;">Nenhum item encontrado.</p>';
+        return;
+      }
+
+      produtos.forEach(product => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'product-item';
+        itemDiv.innerHTML = `
+          <div class="product-info">
+            <h4>${product.nome}</h4>
+          </div>
+          <div class="product-actions">
+            <select id="weight-${product.id}" class="weight-select">
+              <option value="" disabled selected></option>
+              <option value="5Kg">5Kg</option>
+              <option value="7Kg">7Kg</option>
+              <option value="10Kg">10Kg</option>
+              <option value="15Kg">15Kg</option>
+              <option value="20Kg">20Kg</option>
+              <option value="25Kg">25Kg</option>
+              <option value="40Kg">40Kg</option>
+            </select>
+            <button onclick="adicionarItem(${product.id})">+</button>
+          </div>
+        `;
+        resultsDiv.appendChild(itemDiv);
+      });
+    }
+
+    // Adiciona o item
+    function adicionarItem(id) {
+      const item = catalogoProdutos.find(p => p.id === id);
+      const pesoSelect = document.getElementById(`weight-${id}`);
+      const pesoSelecionado = pesoSelect ? pesoSelect.value : "";
+
+      if (!pesoSelecionado) {
+        alert("Por favor, selecione o peso antes de adicionar a ração!");
+        return;
+      }
+
+      if (!item) return;
+
+      const itemUnicoId = `${id}-${pesoSelecionado}`;
+
+      if (minhaLista.some(i => i.unicoId === itemUnicoId)) {
+        alert("Esta ração com este peso já foi adicionada à lista!");
+        return;
+      }
+
+      minhaLista.push({
+        ...item,
+        unicoId: itemUnicoId,
+        peso: pesoSelecionado
+      });
+
+      // Reseta o select do peso
+      pesoSelect.value = "";
+
+      atualizarListaVisual();
+
+      // Dispara o pop-up rápido
+      mostrarPopup(`✓ ${item.nome} (${pesoSelecionado}) adicionada!`);
+    }
+
+    // Remove um item específico da lista
+    function removerItem(unicoId) {
+      minhaLista = minhaLista.filter(item => item.unicoId !== unicoId);
+      atualizarListaVisual();
+    }
+
+    // Atualiza a exibição da lista selecionada
+    function atualizarListaVisual() {
+      const ul = document.getElementById('selectedList');
+      ul.innerHTML = '';
+
+      if (minhaLista.length === 0) {
+        ul.innerHTML = '<p style="color: #888;">Nenhum item adicionado.</p>';
+        return;
+      }
+
+      minhaLista.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'selected-item';
+        li.innerHTML = `
+          <span>${item.nome} <strong>(${item.peso})</strong></span>
+          <button class="btn-remove" onclick="removerItem('${item.unicoId}')">X</button>
+        `;
+        ul.appendChild(li);
+      });
+    }
+
+    // Monta o texto e envia via WhatsApp
+    function enviarWhatsApp() {
+      if (minhaLista.length === 0) {
+        alert("Adicione pelo menos um item à lista!");
+        return;
+      }
+
+      let texto = "*Rações Abastecidas:*\n\n";
+
+      minhaLista.forEach((item) => {
+        texto += `• ${item.nome} - *${item.peso}*\n`;
+      });
+
+      const url = `https://wa.me/5551985451245?text=${encodeURIComponent(texto)}`;
+      window.open(url, '_blank');
+    }
+
+    // Inicializa o catálogo ao carregar a página
+    exibirProdutos(catalogoProdutos);
+    atualizarListaVisual();
+  </script>
+</body>
+</html>
