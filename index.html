@@ -421,7 +421,7 @@
       }
     }
 
-    // Função para exibir o pop-up temporário
+    // Função para exibir o pop-up
     function mostrarPopup(mensagem) {
       const toast = document.getElementById('toast');
       toast.innerText = mensagem;
@@ -433,7 +433,7 @@
       }, 1500); // 1.5 segundos
     }
 
-    // Função para rolar suavemente até o final da página
+    // Função para rolar
     function rolarParaOFim() {
       window.scrollTo({
         top: document.body.scrollHeight,
@@ -441,7 +441,7 @@
       });
     }
 
-    // Filtra o catálogo permitindo múltiplas palavras (ex: "mon cast")
+    // Filtra o catálogo
     function buscarNoCatalogo() {
       const termo = document.getElementById('searchInput').value.toLowerCase().trim();
       const resultsDiv = document.getElementById('results');
@@ -578,8 +578,18 @@
         texto += `• ${item.nome} - *${item.peso}*\n`;
       });
 
-      const url = `https://wa.me/5551985451245?text=${encodeURIComponent(texto)}`;
-      window.open(url, '_blank');
+      if (confirm("Deseja enviar a lista via WhatsApp? Isso limpará a lista após o envio.")) {
+        const url = `https://wa.me/5551985451245?text=${encodeURIComponent(texto)}`;
+        window.open(url, '_blank');
+        // Limpa a lista após confirmação
+        minhaLista = [];
+        salvarEAtualizar();
+      } else {
+        return; // Sai da função se o usuário cancelar
+      }
+
+
+
     }
 
     // Inicializa o catálogo e recupera a lista salva ao carregar a página
