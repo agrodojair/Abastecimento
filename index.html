@@ -85,6 +85,16 @@
       background: #1ebd56;
     }
 
+    .btn-clear {
+      background: #777;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .btn-clear:hover {
+      background: #555;
+    }
+
     .results-list {
       display: flex;
       flex-direction: column;
@@ -218,6 +228,9 @@
       <ul id="selectedList" class="selected-list"></ul>
       <button class="btn-whatsapp" onclick="enviarWhatsApp()">
         Enviar via WhatsApp
+      </button>
+      <button class="btn-clear" onclick="limparLista()">
+        Limpar Lista
       </button>
     </div>
   </div>
@@ -389,8 +402,24 @@
         { id: 158 , nome: 'Flocada P/ Peixes Nutri Flakes Kg'}
     ];
 
-    let minhaLista = [];
+    // Carrega a lista do localStorage (se existir) ao iniciar
+    let minhaLista = JSON.parse(localStorage.getItem('conferenciaRacoes')) || [];
     let toastTimeout;
+
+    // Salva a lista no navegador do usuário
+    function salvarEAtualizar() {
+      localStorage.setItem('conferenciaRacoes', JSON.stringify(minhaLista));
+      atualizarListaVisual();
+    }
+
+    // Limpa toda a lista salva
+    function limparLista() {
+      if (minhaLista.length === 0) return;
+      if (confirm("Tem certeza que deseja limpar toda a lista?")) {
+        minhaLista = [];
+        salvarEAtualizar();
+      }
+    }
 
     // Função para exibir o pop-up temporário
     function mostrarPopup(mensagem) {
@@ -412,7 +441,7 @@
       });
     }
 
-    // Filtra o catálogo conforme o usuário digita
+    // Filtra o catálogo permitindo múltiplas palavras (ex: "mon cast")
     function buscarNoCatalogo() {
       const termo = document.getElementById('searchInput').value.toLowerCase().trim();
       const resultsDiv = document.getElementById('results');
@@ -423,17 +452,17 @@
         return;
       }
 
-      // Divide a busca em termos individuais separando pelos espaços
+      // Separa a busca em palavras individuais por espaço
       const palavras = termo.split(/\s+/);
 
       const filtrados = catalogoProdutos.filter(item => {
         const nomeProduto = item.nome.toLowerCase();
-        // Verifica se TODAS as palavras digitadas estão presentes no nome do produto
+        // Garante que TODAS as palavras buscadas existam no produto
         return palavras.every(palavra => nomeProduto.includes(palavra));
       });
 
-  exibirProdutos(filtrados);
-}
+      exibirProdutos(filtrados);
+    }
 
     // Renderiza a lista de produtos
     function exibirProdutos(produtos) {
@@ -499,16 +528,20 @@
       // Reseta o select do peso
       pesoSelect.value = "";
 
-      atualizarListaVisual();
+      salvarEAtualizar();
 
       // Dispara o pop-up rápido
       mostrarPopup(`✓ ${item.nome} (${pesoSelecionado}) adicionada!`);
+
+      // Limpa o campod e busca
+      document.getElementById('searchInput').value = '';
+      buscarNoCatalogo();
     }
 
     // Remove um item específico da lista
     function removerItem(unicoId) {
       minhaLista = minhaLista.filter(item => item.unicoId !== unicoId);
-      atualizarListaVisual();
+      salvarEAtualizar();
     }
 
     // Atualiza a exibição da lista selecionada
@@ -549,7 +582,7 @@
       window.open(url, '_blank');
     }
 
-    // Inicializa o catálogo ao carregar a página
+    // Inicializa o catálogo e recupera a lista salva ao carregar a página
     exibirProdutos(catalogoProdutos);
     atualizarListaVisual();
   </script>
