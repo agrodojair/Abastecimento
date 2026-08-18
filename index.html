@@ -423,12 +423,17 @@
         return;
       }
 
-      const filtrados = catalogoProdutos.filter(item => 
-        item.nome.toLowerCase().includes(termo)
-      );
+      // Divide a busca em termos individuais separando pelos espaços
+      const palavras = termo.split(/\s+/);
 
-      exibirProdutos(filtrados);
-    }
+      const filtrados = catalogoProdutos.filter(item => {
+        const nomeProduto = item.nome.toLowerCase();
+        // Verifica se TODAS as palavras digitadas estão presentes no nome do produto
+        return palavras.every(palavra => nomeProduto.includes(palavra));
+      });
+
+  exibirProdutos(filtrados);
+}
 
     // Renderiza a lista de produtos
     function exibirProdutos(produtos) {
