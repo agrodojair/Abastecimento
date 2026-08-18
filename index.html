@@ -123,7 +123,7 @@
       align-items: center;
     }
 
-    .weight-select {
+    .qty-select, .weight-select {
       padding: 10px;
       border: 1px solid #ddd;
       border-radius: 8px;
@@ -482,6 +482,18 @@
             <h4>${product.nome}</h4>
           </div>
           <div class="product-actions">
+            <select id="qty-${product.id}" class="qty-select">
+              <option value="1">1x</option>
+              <option value="2">2x</option>
+              <option value="3">3x</option>
+              <option value="4">4x</option>
+              <option value="5">5x</option>
+              <option value="6">6x</option>
+              <option value="7">7x</option>
+              <option value="8">8x</option>
+              <option value="9">9x</option>
+              <option value="10">10x</option>
+            </select>
             <select id="weight-${product.id}" class="weight-select">
               <option value="" disabled selected></option>
               <option value="5Kg">5Kg</option>
@@ -503,7 +515,10 @@
     function adicionarItem(id) {
       const item = catalogoProdutos.find(p => p.id === id);
       const pesoSelect = document.getElementById(`weight-${id}`);
+      const qtySelect = document.getElementById(`qty-${id}`);
+      
       const pesoSelecionado = pesoSelect ? pesoSelect.value : "";
+      const qtdSelecionada = qtySelect ? parseInt(qtySelect.value, 10) : 1;
 
       if (!pesoSelecionado) {
         alert("Por favor, selecione o peso antes de adicionar a ração!");
@@ -513,27 +528,29 @@
       if (!item) return;
 
       const itemUnicoId = `${id}-${pesoSelecionado}`;
+      const itemExistente = minhaLista.find(i => i.unicoId === itemUnicoId);
 
-      if (minhaLista.some(i => i.unicoId === itemUnicoId)) {
-        alert("Esta ração com este peso já foi adicionada à lista!");
-        return;
+      if (itemExistente) {
+        itemExistente.qtd += qtdSelecionada;
+      } else {
+        minhaLista.push({
+          ...item,
+          unicoId: itemUnicoId,
+          peso: pesoSelecionado,
+          qtd: qtdSelecionada
+        });
       }
 
-      minhaLista.push({
-        ...item,
-        unicoId: itemUnicoId,
-        peso: pesoSelecionado
-      });
-
-      // Reseta o select do peso
+      // Reseta os selects
       pesoSelect.value = "";
+      if (qtySelect) qtySelect.value = "1";
 
       salvarEAtualizar();
 
       // Dispara o pop-up rápido
-      mostrarPopup(`✓ ${item.nome} (${pesoSelecionado}) adicionada!`);
+      mostrarPopup(`✓ ${qtdSelecionada}x ${item.nome} (${pesoSelecionado}) adicionada!`);
 
-      // Limpa o campod e busca
+      // Limpa o campo de busca
       document.getElementById('searchInput').value = '';
       buscarNoCatalogo();
     }
@@ -558,7 +575,7 @@
         const li = document.createElement('li');
         li.className = 'selected-item';
         li.innerHTML = `
-          <span>${item.nome} <strong>(${item.peso})</strong></span>
+          <span><strong>${item.qtd}x</strong> ${item.nome} <strong>(${item.peso})</strong></span>
           <button class="btn-remove" onclick="removerItem('${item.unicoId}')">X</button>
         `;
         ul.appendChild(li);
@@ -575,7 +592,7 @@
       let texto = "*Rações Abastecidas:*\n\n";
 
       minhaLista.forEach((item) => {
-        texto += `• ${item.nome} - *${item.peso}*\n`;
+        texto += `• *${item.qtd}x* ${item.nome} - *${item.peso}*\n`;
       });
 
       if (confirm("Deseja enviar a lista via WhatsApp? Isso limpará a lista após o envio.")) {
@@ -587,9 +604,6 @@
       } else {
         return; // Sai da função se o usuário cancelar
       }
-
-
-
     }
 
     // Inicializa o catálogo e recupera a lista salva ao carregar a página
