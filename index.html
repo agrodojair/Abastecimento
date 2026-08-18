@@ -210,7 +210,7 @@
 <body>
 
   <!-- Elemento do Pop-up -->
-  <div id="toast" class="toast-notification">✓ Ração adicionada com sucesso!</div>
+  <div id="toast" class="toast-notification">Ração adicionada com sucesso!</div>
 
   <div class="container">
     <!-- Seção de Busca -->
@@ -592,7 +592,7 @@
       let texto = "*Rações Abastecidas:*\n\n";
 
       minhaLista.forEach((item) => {
-        texto += `• *${item.qtd}x* ${item.nome} - *${item.peso}*\n`;
+        texto += `• *${item.qtd}x* ${item.nome} - *${item.peso}*\n\n`;
       });
 
       if (confirm("Deseja enviar a lista via WhatsApp? Isso limpará a lista após o envio.")) {
