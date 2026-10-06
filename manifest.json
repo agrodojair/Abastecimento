@@ -1,20 +1,20 @@
 {
-  "name": "Conferência",
-  "short_name": "Conferência",
-  "start_url": "/",
-  "scope": "/",
+  "name": "Abastecimento",
+  "short_name": "Abastecimento",
+  "start_url": "/Abastecimento/",
+  "scope": "/Abastecimento/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/Abastecimento/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/Abastecimento/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
