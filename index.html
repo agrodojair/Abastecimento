@@ -241,7 +241,35 @@
     Finalizar ↓
   </button>
 
-  <script>
+  <script type="module">
+    // Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      onSnapshot,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCK_ukB0OCgH2kbWCbGj2LDarWHFFVH3I8",
+      authDomain: "abastecimento-c296e.firebaseapp.com",
+      projectId: "abastecimento-c296e",
+      storageBucket: "abastecimento-c296e.firebasestorage.app",
+      messagingSenderId: "339888568302",
+      appId: "1:339888568302:web:409cad60b94df0c4b6c0ff"
+    };
+
+    const firebaseApp = initializeApp(firebaseConfig);
+    const auth = getAuth(firebaseApp);
+    const db = getFirestore(firebaseApp);
+    const listaRef = doc(db, "abastecimento", "atual");
+
+    let usuarioAutenticado = false;
+    let sincronizacaoIniciada = false;
+    let toastTimeout;
+
     const catalogoProdutos = [
         { id: 1 , nome: 'Adubo Preto Kg'},
         { id: 2 , nome: 'Aveia Kg'},
@@ -411,22 +439,47 @@
 
     ];
 
-    // Carrega a lista do localStorage (se existir) ao iniciar
-    let minhaLista = JSON.parse(localStorage.getItem('conferenciaRacoes')) || [];
-    let toastTimeout;
+    // Lista compartilhada armazenada no Firestore.
+    let minhaLista = [];
 
-    // Salva a lista no navegador do usuário
-    function salvarEAtualizar() {
-      localStorage.setItem('conferenciaRacoes', JSON.stringify(minhaLista));
-      atualizarListaVisual();
+    // Executa uma alteração sobre a lista atual no servidor.
+    // A transação reduz o risco de dois aparelhos sobrescreverem alterações
+    // um do outro quando estiverem usando o sistema ao mesmo tempo.
+    async function alterarListaFirebase(alteracao) {
+      if (!usuarioAutenticado) {
+        alert("Aguarde um instante enquanto o sistema conecta ao servidor.");
+        return false;
+      }
+
+      try {
+        await runTransaction(db, async (transaction) => {
+          const snapshot = await transaction.get(listaRef);
+          const listaAtual = snapshot.exists() && Array.isArray(snapshot.data().itens)
+            ? snapshot.data().itens
+            : [];
+
+          const listaNova = alteracao(listaAtual);
+
+          transaction.set(listaRef, {
+            itens: listaNova,
+            atualizadoEm: new Date().toISOString()
+          });
+        });
+
+        return true;
+      } catch (erro) {
+        console.error("Erro ao salvar no Firebase:", erro);
+        alert("Não foi possível salvar a alteração. Verifique sua conexão e tente novamente.");
+        return false;
+      }
     }
 
-    // Limpa toda a lista salva
-    function limparLista() {
+    // Limpa toda a lista compartilhada.
+    async function limparLista() {
       if (minhaLista.length === 0) return;
+
       if (confirm("Tem certeza que deseja limpar toda a lista?")) {
-        minhaLista = [];
-        salvarEAtualizar();
+        await alterarListaFirebase(() => []);
       }
     }
 
@@ -521,12 +574,12 @@
       });
     }
 
-    // Adiciona o item
-    function adicionarItem(id) {
+    // Adiciona o item no Firestore.
+    async function adicionarItem(id) {
       const item = catalogoProdutos.find(p => p.id === id);
       const pesoSelect = document.getElementById(`weight-${id}`);
       const qtySelect = document.getElementById(`qty-${id}`);
-      
+
       const pesoSelecionado = pesoSelect ? pesoSelect.value : "";
       const qtdSelecionada = qtySelect ? parseInt(qtySelect.value, 10) : 1;
 
@@ -538,37 +591,41 @@
       if (!item) return;
 
       const itemUnicoId = `${id}-${pesoSelecionado}`;
-      const itemExistente = minhaLista.find(i => i.unicoId === itemUnicoId);
 
-      if (itemExistente) {
-        itemExistente.qtd += qtdSelecionada;
-      } else {
-        minhaLista.push({
-          ...item,
-          unicoId: itemUnicoId,
-          peso: pesoSelecionado,
-          qtd: qtdSelecionada
-        });
-      }
+      const sucesso = await alterarListaFirebase((listaAtual) => {
+        const listaNova = [...listaAtual];
+        const itemExistente = listaNova.find(i => i.unicoId === itemUnicoId);
 
-      // Reseta os selects
+        if (itemExistente) {
+          itemExistente.qtd += qtdSelecionada;
+        } else {
+          listaNova.push({
+            ...item,
+            unicoId: itemUnicoId,
+            peso: pesoSelecionado,
+            qtd: qtdSelecionada
+          });
+        }
+
+        return listaNova;
+      });
+
+      if (!sucesso) return;
+
       pesoSelect.value = "";
       if (qtySelect) qtySelect.value = "1";
 
-      salvarEAtualizar();
-
-      // Dispara o pop-up rápido
       mostrarPopup(`✓ ${qtdSelecionada}x ${item.nome} (${pesoSelecionado}) adicionada!`);
 
-      // Limpa o campo de busca
       document.getElementById('searchInput').value = '';
       buscarNoCatalogo();
     }
 
-    // Remove um item específico da lista
-    function removerItem(unicoId) {
-      minhaLista = minhaLista.filter(item => item.unicoId !== unicoId);
-      salvarEAtualizar();
+    // Remove um item específico da lista compartilhada.
+    async function removerItem(unicoId) {
+      await alterarListaFirebase((listaAtual) =>
+        listaAtual.filter(item => item.unicoId !== unicoId)
+      );
     }
 
     // Atualiza a exibição da lista selecionada
@@ -608,17 +665,45 @@
       if (confirm("Deseja enviar a lista via WhatsApp? Isso limpará a lista após o envio.")) {
         const url = `https://wa.me/5551985451245?text=${encodeURIComponent(texto)}`;
         window.open(url, '_blank');
-        // Limpa a lista após confirmação
-        minhaLista = [];
-        salvarEAtualizar();
+        // Limpa a lista compartilhada após confirmação.
+        await alterarListaFirebase(() => []);
       } else {
         return; // Sai da função se o usuário cancelar
       }
     }
 
-    // Inicializa o catálogo e recupera a lista salva ao carregar a página
+    // Inicializa o catálogo imediatamente.
     exibirProdutos(catalogoProdutos);
     atualizarListaVisual();
+
+    // Login anônimo automático.
+    signInAnonymously(auth).catch((erro) => {
+      console.error("Erro ao autenticar anonimamente:", erro);
+      alert("Não foi possível conectar ao servidor. Recarregue a página e tente novamente.");
+    });
+
+    // Sincroniza a lista compartilhada em tempo real.
+    onAuthStateChanged(auth, (usuario) => {
+      usuarioAutenticado = !!usuario;
+
+      if (!usuario || sincronizacaoIniciada) return;
+
+      sincronizacaoIniciada = true;
+
+      onSnapshot(listaRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const dados = snapshot.data();
+          minhaLista = Array.isArray(dados.itens) ? dados.itens : [];
+        } else {
+          minhaLista = [];
+        }
+
+        atualizarListaVisual();
+      }, (erro) => {
+        console.error("Erro ao sincronizar com o Firebase:", erro);
+        alert("Não foi possível sincronizar a lista com o servidor.");
+      });
+    });
   </script>
 </body>
 </html>
