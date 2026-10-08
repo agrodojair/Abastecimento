@@ -268,7 +268,6 @@
 
     let usuarioAutenticado = false;
     let sincronizacaoIniciada = false;
-    let toastTimeout;
 
     const catalogoProdutos = [
         { id: 1 , nome: 'Adubo Preto Kg'},
@@ -439,25 +438,21 @@
 
     ];
 
-    // Lista compartilhada armazenada no Firestore.
+    // Lista compartilhada no Firestore
     let minhaLista = [];
+    let toastTimeout;
 
-    // Executa uma alteração sobre a lista atual no servidor.
-    // A transação reduz o risco de dois aparelhos sobrescreverem alterações
-    // um do outro quando estiverem usando o sistema ao mesmo tempo.
     async function alterarListaFirebase(alteracao) {
       if (!usuarioAutenticado) {
-        alert("Aguarde um instante enquanto o sistema conecta ao servidor.");
+        alert("Ainda estamos conectando ao servidor. Aguarde um instante e tente novamente.");
         return false;
       }
 
       try {
         await runTransaction(db, async (transaction) => {
           const snapshot = await transaction.get(listaRef);
-          const listaAtual = snapshot.exists() && Array.isArray(snapshot.data().itens)
-            ? snapshot.data().itens
-            : [];
-
+          const dados = snapshot.exists() ? snapshot.data() : {};
+          const listaAtual = Array.isArray(dados.itens) ? dados.itens : [];
           const listaNova = alteracao(listaAtual);
 
           transaction.set(listaRef, {
@@ -465,19 +460,16 @@
             atualizadoEm: new Date().toISOString()
           });
         });
-
         return true;
       } catch (erro) {
-        console.error("Erro ao salvar no Firebase:", erro);
-        alert("Não foi possível salvar a alteração. Verifique sua conexão e tente novamente.");
+        console.error("Erro ao salvar a lista no Firebase:", erro);
+        alert("Não foi possível salvar a lista no servidor. Verifique sua conexão e tente novamente.");
         return false;
       }
     }
 
-    // Limpa toda a lista compartilhada.
     async function limparLista() {
       if (minhaLista.length === 0) return;
-
       if (confirm("Tem certeza que deseja limpar toda a lista?")) {
         await alterarListaFirebase(() => []);
       }
@@ -650,7 +642,7 @@
     }
 
     // Monta o texto e envia via WhatsApp
-    function enviarWhatsApp() {
+    async function enviarWhatsApp() {
       if (minhaLista.length === 0) {
         alert("Adicione pelo menos um item à lista!");
         return;
@@ -671,6 +663,15 @@
         return; // Sai da função se o usuário cancelar
       }
     }
+
+    // Como este script usa type="module", funções chamadas pelo HTML
+    // via onclick/onkeyup precisam ficar disponíveis globalmente.
+    window.buscarNoCatalogo = buscarNoCatalogo;
+    window.adicionarItem = adicionarItem;
+    window.removerItem = removerItem;
+    window.enviarWhatsApp = enviarWhatsApp;
+    window.limparLista = limparLista;
+    window.rolarParaOFim = rolarParaOFim;
 
     // Inicializa o catálogo imediatamente.
     exibirProdutos(catalogoProdutos);
