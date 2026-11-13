@@ -368,11 +368,16 @@
     }
 
     // ---------- Catálogo ----------
-    function buscarNoCatalogo() {
-      const termo = norm(document.getElementById("searchInput").value);
-      if (!termo) return exibirProdutos(catalogoProdutos);
+    // Busca por palavras parciais: "qua cast salm" encontra "Quartz Castrados Salmao"
+    function filtrarCatalogo(texto) {
+      const termo = norm(texto);
+      if (!termo) return catalogoProdutos;
       const palavras = termo.split(" ");
-      exibirProdutos(catalogoProdutos.filter(p => palavras.every(w => norm(p.nome).includes(w))));
+      return catalogoProdutos.filter(p => palavras.every(w => norm(p.nome).includes(w)));
+    }
+
+    function buscarNoCatalogo() {
+      exibirProdutos(filtrarCatalogo(document.getElementById("searchInput").value));
     }
 
     function exibirProdutos(produtos) {
@@ -425,9 +430,8 @@
 
     // ---------- Administração ----------
     function renderAdminRacoes() {
-      const termo = norm(document.getElementById("filtroAdmin").value);
       const div = document.getElementById("adminRacoes");
-      const lista = catalogoProdutos.filter(r => !termo || norm(r.nome).includes(termo));
+      const lista = filtrarCatalogo(document.getElementById("filtroAdmin").value);
       div.innerHTML = lista.length ? "" : '<div class="admin-item"><span class="empty">Nenhuma ração.</span></div>';
       lista.forEach(r => {
         const el = document.createElement("div");
@@ -558,7 +562,7 @@
       }
     }
 
-    async function sair() { await signOut(auth); }
+    async function sair() { await signOut(auth); location.reload(); }
 
     function aplicarEstadoAdmin() {
       document.getElementById("admin").classList.toggle("show", isAdmin);
@@ -596,13 +600,19 @@
         const d = snap.exists() ? snap.data() : {};
         minhaLista = Array.isArray(d.itens) ? d.itens : [];
         atualizarListaVisual();
-      }, (e) => console.error("Erro ao sincronizar a lista:", e));
+      }, (e) => {
+        console.error("Erro ao sincronizar a lista:", e);
+        document.getElementById("selectedList").innerHTML = '<p class="empty">Não foi possível carregar a lista (' + esc(e.code || "erro") + ').</p>';
+      });
 
       onSnapshot(racoesCol, (snap) => {
         catalogoProdutos = snap.docs.map(d => ({ id: d.id, nome: d.data().nome || "" })).sort(porNome);
         buscarNoCatalogo();
         renderAdminRacoes();
-      }, (e) => console.error("Erro ao sincronizar as rações:", e));
+      }, (e) => {
+        console.error("Erro ao sincronizar as rações:", e);
+        document.getElementById("results").innerHTML = '<p class="empty">Não foi possível carregar as rações (' + esc(e.code || "erro") + '). Verifique se as regras do Firestore foram publicadas.</p>';
+      });
 
       onSnapshot(pesosRef, (snap) => {
         const l = snap.exists() ? snap.data().lista : [];
