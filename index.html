@@ -252,7 +252,12 @@
     };
 
     const ADMIN_UID = "fmLqk1OiGLXMnhTpHcCrVy4kjGX2";
-    const SENHA_LIMPAR = "1274";
+    const SALT_SENHA = "agro-conferencia-v1";
+    const HASH_SENHA_LIMPAR = "1b777c2700aeef46cc2973d95bbd81939848abfa02b17c6d291a88c2706a9190";
+    async function hashSenha(t) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(SALT_SENHA + ":" + t));
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+    }
 
     const firebaseApp = initializeApp(firebaseConfig);
     const auth = getAuth(firebaseApp);
@@ -313,7 +318,7 @@
       if (minhaLista.length === 0) return;
       const senha = prompt("Digite a senha para limpar a lista:");
       if (senha === null) return;
-      if (senha !== SENHA_LIMPAR) {
+      if ((await hashSenha(senha)) !== HASH_SENHA_LIMPAR) {
         alert("Senha incorreta.");
         return;
       }
